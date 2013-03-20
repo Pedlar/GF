@@ -14,7 +14,7 @@ sub port_object {
     
     if(lc $opts{type} eq "json") {
         if(ref($obj) eq "HASH" || ref($obj) eq "ARRAY") {
-            return to_json($obj, {pretty => $opts{pretty}});
+            return _encode_json($obj, {pretty => $opts{pretty}});
         } elsif (is_number($obj)) {
             return $obj;
         } elsif (is_string($obj)) {
@@ -28,14 +28,61 @@ sub port_object {
     }
 }
 
+sub _encode_json {
+    my $obj = shift;
+    my $opts = shift;
+    my $nested = shift // 0;
+    my $return = "";
+    my $space = $opts->{pretty} ? ' ' x 4 : '';
+    my $indent = $space x $nested;
+    my $newline = $opts->{pretty} ? "\n" : "";
+   
+
+    if(ref($obj) eq "HASH") {
+        my $count = 0;
+        my $size = scalar(keys $obj);
+	$return = "{";
+        foreach (keys $obj) {
+            my $tmp = $obj->{$_};
+            if(ref($tmp) eq "ARRAY" || ref($tmp) eq "HASH") {
+                $tmp = _encode_json($tmp, $opts, $nested + 1);
+            } else {
+	        $tmp = is_number($tmp) ? $tmp : qq|"$tmp"|;
+	    }
+            $return .= "$indent\"$_\":$tmp" . (($size-1) > $count ? "," : "") . (($size-1) > $count ? $newline : "");
+            $count = $count + 1
+        }
+	$return .= $indent . "}" . $newline;
+    } elsif(ref($obj) eq "ARRAY") {
+	$return = "[";
+	my $count = 0;
+        my $size = scalar(@{$obj});
+        my $recurse = 0;
+        foreach (@{$obj}) {
+            my $tmp = $_;
+            if(ref($tmp) eq "ARRAY" || ref($tmp) eq "HASH") {
+                $tmp = _encode_json($tmp, $opts, $nested + 1);
+		$recurse = 1;
+            } else { 
+	        $tmp = is_number($tmp) ? $tmp : qq|"$tmp"|;
+	    }
+            $return .= $indent . $tmp . (($size-1) > $count ? "," : "") . $newline;
+	    $count = $count + 1;
+        }
+	$return .= "]" . $newline;
+    }
+    return $return;
+}
+
 sub _encode_html {
     my $obj = shift;
     my $opts = shift;
     my $nested = shift // 0;
     my $return = "";
-    my $space = ' ' x 4;
+    my $space = $opts->{pretty} ? ' ' x 4 : '';
     my $indent = $space x $nested;
-    my $newline = "\\n";
+    my $newline = $opts->{pretty} ? "\n" : "";
+   
 
     if(ref($obj) eq "HASH") {
         my $count = 0;
@@ -45,7 +92,6 @@ sub _encode_html {
             if(ref($tmp) eq "ARRAY" || ref($tmp) eq "HASH") {
                 $tmp = _encode_html($tmp, $opts, $nested + 1);
             }
-            print "Size: $size\nCount: $count";
             $return .= $indent . $_ . $tmp . (($size-1) > $count ? $newline : "");
             $count = $count + 1;
         }
