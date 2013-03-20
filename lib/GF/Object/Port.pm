@@ -30,6 +30,19 @@ sub port_object {
     }
 }
 
+sub escaped_string {
+    my $str = shift;
+    $str =~ s/\\/\\\\/g;
+    $str =~ s/\//\\\//g;
+    $str =~ s/\"/\\\"/g;
+    $str =~ s/\x08/\\b/g;
+    $str =~ s/\f/\\f/g;
+    $str =~ s/\n/\\n/g;
+    $str =~ s/\r/\\r/g;
+    $str =~ s/\t/\\t/g;
+    return qq|"$str"|;
+}
+
 sub _encode_json {
     my $obj = shift;
     my $opts = shift;
@@ -49,7 +62,7 @@ sub _encode_json {
             if(ref($tmp) eq "ARRAY" || ref($tmp) eq "HASH") {
                 $tmp = _encode_json($tmp, $opts, $nested + 1);
             } else {
-	        $tmp = is_number($tmp) ? $tmp : qq|"$tmp"|;
+	        $tmp = is_number($tmp) ? $tmp : escaped_string($tmp);
 	    }
             $return .= "$indent\"$_\":$tmp" . (($size-1) > $count ? "," : "") . (($size-1) > $count ? $newline : "");
             $count = $count + 1
@@ -67,7 +80,7 @@ sub _encode_json {
                 $tmp = _encode_json($tmp, $opts, $nested + 1);
 		$recurse = 1;
             } else { 
-	        $tmp = is_number($tmp) ? $tmp : qq|"$tmp"|;
+	        $tmp = is_number($tmp) ? $tmp : escaped_string($tmp);
 	    }
             $return .= $indent . $tmp . (($size-1) > $count ? "," : "") . $newline ;
 	    $count = $count + 1;
