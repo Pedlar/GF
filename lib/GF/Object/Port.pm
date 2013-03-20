@@ -2,7 +2,6 @@ use strict;
 use warnings;
 package GF::Object::Port;
 use Exporter;
-use JSON;
 use Data::Util qw(:check);
 
 our @ISA = qw(Exporter);
